@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200">
+    <rect x="40" y="50" width="120" height="80" fill="#4CAF50" />
+    <polygon points="40,50 100,20 160,50" fill="#388E3C" />
+    <text x="100" y="160" text-anchor="middle" fill="#ECF0F1" font-size="18" font-family="Arial, sans-serif">
+        es-go
+    </text>
+</svg>

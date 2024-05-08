@@ -1,0 +1,6 @@
+# misc
+.idea
+.env
+.DS_Store
+coverage.out
+coverage.html

@@ -1,0 +1,37 @@
+services:
+  eventstore:
+    env_file:
+      - .env
+    build:
+      context: internal/es-go/infrastructure/etc/eventstore
+    container_name: eventstore
+    ports:
+      - "2113:2113"
+    volumes:
+      - type: volume
+        source: eventstore-volume-data
+        target: /var/lib/eventstore
+      - type: volume
+        source: eventstore-volume-logs
+        target: /var/log/eventstore
+    networks:
+      - es-go
+
+  go:
+    env_file:
+      - .env
+    build:
+      context: .
+    container_name: go
+    volumes:
+      - .:/app:rw
+    networks:
+      - es-go
+
+networks:
+  es-go:
+    name: es-go
+
+volumes:
+  eventstore-volume-data:
+  eventstore-volume-logs:
