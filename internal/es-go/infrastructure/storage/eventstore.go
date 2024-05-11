@@ -56,6 +56,7 @@ func (s EventStore) AppendToStream(streamId string, event event.Event) error {
 	return nil
 }
 
+// TODO: potentially abstract ReadStream return type
 func (s EventStore) GetStream(streamId string, count int) (*esdb.ReadStream, error) {
 	ctx := context.Background()
 	opts := esdb.ReadStreamOptions{}

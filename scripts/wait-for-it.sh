@@ -7,7 +7,7 @@ port=$(echo "$1" | cut -d : -f 2)
 
 until timeout 1 bash -c "cat < /dev/null > /dev/tcp/$host/$port"; do
   echo "Waiting for $host:$port connection..."
-  sleep 5
+  sleep 1
 done
 
 shift
