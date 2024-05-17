@@ -17,6 +17,21 @@ services:
     networks:
       - es-go
 
+  rabbitmq:
+    env_file:
+      - .env
+    build:
+      context: internal/es-go/infrastructure/etc/rabbitmq
+    hostname: rabbitmq
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - ./internal/es-go/infrastructure/etc/rabbitmq:/etc/rabbitmq
+    networks:
+      - es-go
+
   go:
     env_file:
       - .env

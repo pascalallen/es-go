@@ -20,6 +20,16 @@ type User struct {
 	DeletedAt    time.Time             `json:"deleted_at,omitempty"`
 }
 
+func LoadUserFromEvents(events []event.Event) *User {
+	u := &User{}
+
+	for _, evt := range events {
+		u.ApplyEvent(evt)
+	}
+
+	return u
+}
+
 func (u *User) ApplyEvent(evt event.Event) {
 	switch e := evt.(type) {
 	case event.UserRegistered:
@@ -29,6 +39,7 @@ func (u *User) ApplyEvent(evt event.Event) {
 		u.EmailAddress = e.EmailAddress
 		u.CreatedAt = time.Now()
 	case event.UserEmailAddressUpdated:
+		u.Id = e.Id
 		u.EmailAddress = e.EmailAddress
 		u.ModifiedAt = time.Now()
 	}

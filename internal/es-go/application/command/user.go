@@ -1,23 +1,23 @@
-package event
+package command
 
 import "github.com/oklog/ulid/v2"
 
-type UserRegistered struct {
+type RegisterUser struct {
 	Id           ulid.ULID `json:"id"`
 	FirstName    string    `json:"first_name"`
 	LastName     string    `json:"last_name"`
 	EmailAddress string    `json:"email_address"`
 }
 
-func (e UserRegistered) EventName() string {
-	return "UserRegistered"
+func (c RegisterUser) CommandName() string {
+	return "RegisterUser"
 }
 
-type UserEmailAddressUpdated struct {
+type UpdateUserEmailAddress struct {
 	Id           ulid.ULID `json:"id"`
 	EmailAddress string    `json:"email_address"`
 }
 
-func (e UserEmailAddressUpdated) EventName() string {
-	return "UserEmailAddressUpdated"
+func (c UpdateUserEmailAddress) CommandName() string {
+	return "UpdateUserEmailAddress"
 }
