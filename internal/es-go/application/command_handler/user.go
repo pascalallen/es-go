@@ -6,7 +6,6 @@ import (
 	"github.com/pascalallen/es-go/internal/es-go/domain/event"
 	"github.com/pascalallen/es-go/internal/es-go/infrastructure/messaging"
 	"github.com/pascalallen/es-go/internal/es-go/infrastructure/storage"
-	"log"
 )
 
 type RegisterUserHandler struct {
@@ -31,8 +30,6 @@ func (h RegisterUserHandler) Handle(cmd messaging.Command) error {
 		return fmt.Errorf("could not store UserRegistered event: %w", err)
 	}
 
-	log.Printf("User registered with stream %s", streamId)
-
 	return nil
 }
 
@@ -55,8 +52,6 @@ func (h UpdateUserEmailAddressHandler) Handle(cmd messaging.Command) error {
 	if err != nil {
 		return fmt.Errorf("could not store UserEmailAddressUpdated event: %w", err)
 	}
-
-	log.Printf("User email updated with stream %s", streamId)
 
 	return nil
 }
