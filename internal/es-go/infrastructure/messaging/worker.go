@@ -3,11 +3,10 @@ package messaging
 import (
 	"fmt"
 	"github.com/rabbitmq/amqp091-go"
-	"log"
 	"os"
 )
 
-func NewRabbitMQConnection() *amqp091.Connection {
+func NewRabbitMQConnection() (*amqp091.Connection, error) {
 	url := fmt.Sprintf(
 		"amqp://%s:%s@%s:%s/",
 		os.Getenv("RABBITMQ_DEFAULT_USER"),
@@ -18,8 +17,8 @@ func NewRabbitMQConnection() *amqp091.Connection {
 
 	conn, err := amqp091.Dial(url)
 	if err != nil {
-		log.Fatalf("failed to connect to message queue: %s", err)
+		return nil, fmt.Errorf("failed to connect to message queue: %s", err)
 	}
 
-	return conn
+	return conn, nil
 }

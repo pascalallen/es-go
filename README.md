@@ -8,7 +8,8 @@
 
 ![Logo](web/static/logo.svg)
 
-es-go is open source software offering a set of guidelines to use Event Sourcing and Domain-Driven Design in Go. This project is currently a work in progress and undergoing active development.
+es-go is open source software offering a set of guidelines to use Event Sourcing and Domain-Driven Design in Go. 
+This project is currently a work in progress and undergoing active development.
 
 ## Prerequisites
 
