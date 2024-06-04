@@ -14,14 +14,14 @@ import (
 
 type EventStore interface {
 	AppendToStream(streamId string, event event.Event) error
-	ReadFromStream(streamId string, count uint64)
+	ReadFromStream(streamId string, count uint64) error
 }
 
 type EventStoreDb struct {
 	client *esdb.Client
 }
 
-func NewEventStoreDb() EventStore {
+func NewEventStoreDb() (EventStore, error) {
 	connectionString := fmt.Sprintf(
 		"esdb://%s:%s?tls=false&keepAliveTimeout=10000&keepAliveInterval=10000",
 		"eventstore",
@@ -30,15 +30,15 @@ func NewEventStoreDb() EventStore {
 
 	settings, err := esdb.ParseConnectionString(connectionString)
 	if err != nil {
-		log.Fatalf("failed to create configuration for event store: %s", err)
+		return nil, fmt.Errorf("failed to create configuration for event store: %s", err)
 	}
 
 	client, err := esdb.NewClient(settings)
 	if err != nil {
-		log.Fatalf("failed to create client for event store: %s", err)
+		return nil, fmt.Errorf("failed to create client for event store: %s", err)
 	}
 
-	return &EventStoreDb{client: client}
+	return &EventStoreDb{client: client}, nil
 }
 
 func (s *EventStoreDb) AppendToStream(streamId string, event event.Event) error {
@@ -49,24 +49,30 @@ func (s *EventStoreDb) AppendToStream(streamId string, event event.Event) error 
 
 	stream, err := s.client.ReadStream(context.Background(), streamId, ropts, 1)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to read from stream: %s", err)
 	}
 
 	defer stream.Close()
 
 	lastEvent, err := stream.Recv()
-	if err != nil {
-		panic(err)
+	if err, ok := esdb.FromError(err); !ok {
+		if err.Code() == esdb.ErrorCodeResourceNotFound {
+			log.Printf("event stream not found when appending to stream with ID: %s", streamId)
+		} else {
+			return fmt.Errorf("failed to get last event from stream: %s", err)
+		}
 	}
 
 	data, err := json.Marshal(event)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal event for stream: %s", err)
 	}
 
-	ctx := context.Background()
-	opts := esdb.AppendToStreamOptions{
-		ExpectedRevision: lastEvent.OriginalStreamRevision(),
+	opts := esdb.AppendToStreamOptions{}
+	if lastEvent != nil {
+		opts = esdb.AppendToStreamOptions{
+			ExpectedRevision: lastEvent.OriginalStreamRevision(),
+		}
 	}
 	eventData := esdb.EventData{
 		ContentType: esdb.ContentTypeJson,
@@ -74,15 +80,16 @@ func (s *EventStoreDb) AppendToStream(streamId string, event event.Event) error 
 		Data:        data,
 	}
 
-	_, err = s.client.AppendToStream(ctx, streamId, opts, eventData)
+	_, err = s.client.AppendToStream(context.Background(), streamId, opts, eventData)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to append event to stream: %s", err)
 	}
 
 	return nil
 }
 
-func (s *EventStoreDb) ReadFromStream(streamId string, count uint64) {
+// work in progress
+func (s *EventStoreDb) ReadFromStream(streamId string, count uint64) error {
 	ctx := context.Background()
 	opts := esdb.ReadStreamOptions{
 		From:      esdb.Start{},
@@ -91,7 +98,7 @@ func (s *EventStoreDb) ReadFromStream(streamId string, count uint64) {
 
 	stream, err := s.client.ReadStream(ctx, streamId, opts, count)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to read from stream: %s", err)
 	}
 
 	defer stream.Close()
@@ -111,4 +118,6 @@ func (s *EventStoreDb) ReadFromStream(streamId string, count uint64) {
 
 		fmt.Printf("Event> %v", evt)
 	}
+
+	return nil
 }

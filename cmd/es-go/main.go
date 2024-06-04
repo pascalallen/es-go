@@ -7,13 +7,18 @@ import (
 	"github.com/pascalallen/es-go/internal/es-go/application/command_handler"
 	"github.com/pascalallen/es-go/internal/es-go/infrastructure/messaging"
 	"github.com/pascalallen/es-go/internal/es-go/infrastructure/storage"
+	"log"
+	"time"
 )
 
 func main() {
-	eventStore := storage.NewEventStoreDb()
-	rabbitMqConn := messaging.NewRabbitMQConnection()
+	eventStore, err := storage.NewEventStoreDb()
+	exitOnError(err)
+	rabbitMqConn, err := messaging.NewRabbitMQConnection()
+	exitOnError(err)
 	defer rabbitMqConn.Close()
-	commandBus := messaging.NewRabbitMqCommandBus(rabbitMqConn)
+	commandBus, err := messaging.NewRabbitMqCommandBus(rabbitMqConn)
+	exitOnError(err)
 
 	// command registry
 	commandBus.RegisterHandler(command.RegisterUser{}.CommandName(), command_handler.RegisterUserHandler{EventStore: eventStore})
@@ -21,20 +26,34 @@ func main() {
 
 	go commandBus.StartConsuming()
 
-	// simulate user registration
-	userId := ulid.Make()
-	registerUserCommand := command.RegisterUser{
-		Id:           userId,
-		FirstName:    "Pascal",
-		LastName:     "Allen",
-		EmailAddress: "pascal@allen.com",
-	}
-	commandBus.Execute(registerUserCommand)
+	time.Sleep(time.Second * 3)
 
-	// simulate email address update
-	updateUserEmailCommand := command.UpdateUserEmailAddress{
-		Id:           userId,
-		EmailAddress: "thomas@allen.com",
+	go func() {
+		// simulate user registration
+		userId := ulid.Make()
+		registerUserCommand := command.RegisterUser{
+			Id:           userId,
+			FirstName:    "Pascal",
+			LastName:     "Allen",
+			EmailAddress: "pascal@allen.com",
+		}
+		err = commandBus.Execute(registerUserCommand)
+		exitOnError(err)
+
+		// simulate email address update
+		updateUserEmailCommand := command.UpdateUserEmailAddress{
+			Id:           userId,
+			EmailAddress: "thomas@allen.com",
+		}
+		err = commandBus.Execute(updateUserEmailCommand)
+		exitOnError(err)
+	}()
+
+	select {}
+}
+
+func exitOnError(err error) {
+	if err != nil {
+		log.Fatalln(err)
 	}
-	commandBus.Execute(updateUserEmailCommand)
 }
