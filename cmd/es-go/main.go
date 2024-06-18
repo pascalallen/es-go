@@ -61,7 +61,8 @@ func main() {
 	go func() {
 		// simulate querying for user by ID
 		getUserByIdQuery := query.GetUserById{Id: userId}
-		_, err := queryBus.Fetch(getUserByIdQuery)
+		u, err := queryBus.Fetch(getUserByIdQuery)
+		log.Printf("[[[ USER BUILT FROM EVENTS ]]]: %v\n", u)
 		exitOnError(err)
 	}()
 
