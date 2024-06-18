@@ -5,6 +5,8 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/pascalallen/es-go/internal/es-go/application/command"
 	"github.com/pascalallen/es-go/internal/es-go/application/command_handler"
+	"github.com/pascalallen/es-go/internal/es-go/application/query"
+	"github.com/pascalallen/es-go/internal/es-go/application/query_handler"
 	"github.com/pascalallen/es-go/internal/es-go/infrastructure/messaging"
 	"github.com/pascalallen/es-go/internal/es-go/infrastructure/storage"
 	"log"
@@ -19,6 +21,7 @@ func main() {
 	defer rabbitMqConn.Close()
 	commandBus, err := messaging.NewRabbitMqCommandBus(rabbitMqConn)
 	exitOnError(err)
+	queryBus := messaging.NewSynchronousQueryBus()
 
 	// command registry
 	commandBus.RegisterHandler(command.RegisterUser{}.CommandName(), command_handler.RegisterUserHandler{EventStore: eventStore})
@@ -26,11 +29,15 @@ func main() {
 
 	go commandBus.StartConsuming()
 
+	// query registry
+	queryBus.RegisterHandler(query.GetUserById{}.QueryName(), query_handler.GetUserByIdHandler{EventStore: eventStore})
+
 	time.Sleep(time.Second * 3)
+
+	userId := ulid.Make()
 
 	go func() {
 		// simulate user registration
-		userId := ulid.Make()
 		registerUserCommand := command.RegisterUser{
 			Id:           userId,
 			FirstName:    "Pascal",
@@ -46,6 +53,15 @@ func main() {
 			EmailAddress: "thomas@allen.com",
 		}
 		err = commandBus.Execute(updateUserEmailCommand)
+		exitOnError(err)
+	}()
+
+	time.Sleep(time.Second * 3)
+
+	go func() {
+		// simulate querying for user by ID
+		getUserByIdQuery := query.GetUserById{Id: userId}
+		_, err := queryBus.Fetch(getUserByIdQuery)
 		exitOnError(err)
 	}()
 

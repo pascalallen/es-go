@@ -5,6 +5,7 @@ import (
 	"github.com/pascalallen/es-go/internal/es-go/domain/event"
 	"github.com/pascalallen/es-go/internal/es-go/domain/password"
 	"github.com/pascalallen/es-go/internal/es-go/domain/role"
+	"github.com/pascalallen/es-go/internal/es-go/infrastructure/storage"
 	"time"
 )
 
@@ -20,17 +21,17 @@ type User struct {
 	DeletedAt    time.Time             `json:"deleted_at,omitempty"`
 }
 
-func LoadUserFromEvents(events []event.Event) *User {
+func LoadUserFromEvents(events []storage.Event) *User {
 	u := &User{}
 
 	for _, evt := range events {
-		u.ApplyEvent(evt)
+		u.applyEvent(evt)
 	}
 
 	return u
 }
 
-func (u *User) ApplyEvent(evt event.Event) {
+func (u *User) applyEvent(evt storage.Event) {
 	switch e := evt.(type) {
 	case event.UserRegistered:
 		u.Id = e.Id

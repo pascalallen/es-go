@@ -18,6 +18,8 @@ func (h RegisterUserHandler) Handle(cmd messaging.Command) error {
 		return fmt.Errorf("invalid command type passed to RegisterUserHandler: %v", cmd)
 	}
 
+	// TODO: Unique email constraint
+
 	registerEvent := event.UserRegistered{
 		Id:           c.Id,
 		FirstName:    c.FirstName,
@@ -42,6 +44,8 @@ func (h UpdateUserEmailAddressHandler) Handle(cmd messaging.Command) error {
 	if !ok {
 		return fmt.Errorf("invalid command type passed to UpdateUserEmailAddressHandler: %v", cmd)
 	}
+
+	// TODO: Unique email constraint
 
 	emailUpdateEvent := event.UserEmailAddressUpdated{
 		Id:           c.Id,
