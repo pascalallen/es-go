@@ -32,14 +32,16 @@ func LoadUserFromEvents(events []storage.Event) *User {
 }
 
 func (u *User) applyEvent(evt storage.Event) {
-	switch e := evt.(type) {
-	case event.UserRegistered:
+	switch evt.EventName() {
+	case event.UserRegistered{}.EventName():
+		e := evt.(*event.UserRegistered)
 		u.Id = e.Id
 		u.FirstName = e.FirstName
 		u.LastName = e.LastName
 		u.EmailAddress = e.EmailAddress
 		u.CreatedAt = time.Now()
-	case event.UserEmailAddressUpdated:
+	case event.UserEmailAddressUpdated{}.EventName():
+		e := evt.(*event.UserEmailAddressUpdated)
 		u.Id = e.Id
 		u.EmailAddress = e.EmailAddress
 		u.ModifiedAt = time.Now()

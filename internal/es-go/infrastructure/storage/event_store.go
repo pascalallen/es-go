@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/EventStore/EventStore-Client-Go/v4/esdb"
+	"github.com/pascalallen/es-go/internal/es-go/domain/event"
 	"io"
 	"log"
 	"os"
@@ -93,9 +94,9 @@ func (s *EventStoreDb) AppendToStream(streamId string, event Event) error {
 
 func (s *EventStoreDb) ReadFromStream(streamId string) ([]Event, error) {
 	var events []Event
+	position := esdb.Revision(0)
 
 	for {
-		position := esdb.Revision(0)
 		opts := esdb.ReadStreamOptions{
 			From:      position,
 			Direction: esdb.Forwards,
@@ -110,18 +111,32 @@ func (s *EventStoreDb) ReadFromStream(streamId string) ([]Event, error) {
 
 		for {
 			evt, err := stream.Recv()
-
 			if err, ok := esdb.FromError(err); !ok {
 				if errors.Is(err, io.EOF) {
 					break
 				}
 
-				return events, fmt.Errorf("error attempting to stream incoming event: %s", err)
+				if err, ok := esdb.FromError(err); !ok {
+					return events, fmt.Errorf("error attempting to stream incoming event: %s", err)
+				}
 			}
 
-			// TODO
-			//events = append(events, evt)
-			log.Printf("[[[ EVENT ]]]: %v", evt)
+			var e Event
+			switch evt.OriginalEvent().EventType {
+			case event.UserRegistered{}.EventName():
+				e = &event.UserRegistered{}
+			case event.UserEmailAddressUpdated{}.EventName():
+				e = &event.UserEmailAddressUpdated{}
+			default:
+				return events, fmt.Errorf("unknown event retrieved: %s", evt.OriginalEvent().EventType)
+			}
+
+			err = json.Unmarshal(evt.OriginalEvent().Data, &e)
+			if err != nil {
+				return events, fmt.Errorf("failed to unmarshal event: %s", err)
+			}
+
+			events = append(events, e)
 
 			position = esdb.Revision(evt.OriginalEvent().EventNumber + 1)
 			hasMoreEvents = true
