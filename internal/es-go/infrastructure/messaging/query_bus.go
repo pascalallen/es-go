@@ -1,8 +1,6 @@
 package messaging
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type Query interface {
 	QueryName() string
