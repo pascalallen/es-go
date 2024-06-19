@@ -28,7 +28,7 @@ type EventStoreDb struct {
 func NewEventStoreDb() (EventStore, error) {
 	connectionString := fmt.Sprintf(
 		"esdb://%s:%s?tls=false&keepAliveTimeout=10000&keepAliveInterval=10000",
-		"eventstore",
+		os.Getenv("EVENTSTORE_HOST"),
 		os.Getenv("EVENTSTORE_HTTP_PORT"),
 	)
 

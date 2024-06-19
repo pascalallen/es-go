@@ -16,6 +16,6 @@ ENV GOCACHE=/root/.cache/go-build
 
 RUN --mount=type=cache,target="/root/.cache/go-build" CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -C cmd/es-go -o /es-go
 
-CMD /usr/bin/wait-for-it.sh eventstore:$EVENTSTORE_HTTP_PORT \
+CMD /usr/bin/wait-for-it.sh $EVENTSTORE_HOST:$EVENTSTORE_HTTP_PORT \
     && /usr/bin/wait-for-it.sh $RABBITMQ_HOST:$RABBITMQ_PORT \
     && /es-go

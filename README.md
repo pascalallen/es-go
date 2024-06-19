@@ -42,6 +42,20 @@ bin/up
 bin/down
 ```
 
+## Testing
+
+Run tests and create coverage profile:
+
+```bash
+bin/exec go test ./... -covermode=count -coverprofile=coverage.out
+```
+
+Generate HTML file to view test coverage profile:
+
+```bash
+bin/exec go tool cover -html=coverage.out -o coverage.html
+```
+
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first
