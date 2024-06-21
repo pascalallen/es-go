@@ -18,7 +18,7 @@ func TestThatCommandNameReturnsExpectedValueRegisterUser(t *testing.T) {
 	}
 }
 
-func TestThatCommandNameReturnsExpectedValueRegisterUpdateUserEmailAddress(t *testing.T) {
+func TestThatCommandNameReturnsExpectedValueUpdateUserEmailAddress(t *testing.T) {
 	cmd := UpdateUserEmailAddress{
 		Id:           ulid.Make(),
 		EmailAddress: "thomas@allen.com",
