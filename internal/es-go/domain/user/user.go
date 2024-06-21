@@ -10,15 +10,15 @@ import (
 )
 
 type User struct {
-	Id           ulid.ULID             `json:"id"`
-	FirstName    string                `json:"first_name"`
-	LastName     string                `json:"last_name"`
-	EmailAddress string                `json:"email_address"`
-	PasswordHash password.PasswordHash `json:"-"`
-	Roles        []role.Role           `json:"roles"`
-	CreatedAt    time.Time             `json:"created_at"`
-	ModifiedAt   time.Time             `json:"modified_at,omitempty"`
-	DeletedAt    time.Time             `json:"deleted_at,omitempty"`
+	Id           ulid.ULID     `json:"id"`
+	FirstName    string        `json:"first_name"`
+	LastName     string        `json:"last_name"`
+	EmailAddress string        `json:"email_address"`
+	PasswordHash password.Hash `json:"-"`
+	Roles        []role.Role   `json:"roles"`
+	CreatedAt    time.Time     `json:"created_at"`
+	ModifiedAt   time.Time     `json:"modified_at,omitempty"`
+	DeletedAt    time.Time     `json:"deleted_at,omitempty"`
 }
 
 func LoadUserFromEvents(events []storage.Event) *User {

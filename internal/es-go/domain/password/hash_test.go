@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-func TestThatCreateReturnsInstanceOfPasswordHash(t *testing.T) {
+func TestThatCreateReturnsInstanceOfHash(t *testing.T) {
 	p := Create("pa$$w0rd")
 
-	if reflect.TypeOf(p).Name() != "PasswordHash" {
+	if reflect.TypeOf(p).Name() != "Hash" {
 		t.Fatal("test failed attempting to call method: Create")
 	}
 }
