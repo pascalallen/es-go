@@ -7,31 +7,35 @@ import (
 	"github.com/pascalallen/es-go/internal/es-go/application/command_handler"
 	"github.com/pascalallen/es-go/internal/es-go/application/query"
 	"github.com/pascalallen/es-go/internal/es-go/application/query_handler"
-	"github.com/pascalallen/es-go/internal/es-go/infrastructure/messaging"
-	"github.com/pascalallen/es-go/internal/es-go/infrastructure/storage"
 	"log"
 	"time"
 )
 
 func main() {
-	eventStore, err := storage.NewEventStoreDb()
-	exitOnError(err)
-	rabbitMqConn, err := messaging.NewRabbitMQConnection()
-	exitOnError(err)
-	defer rabbitMqConn.Close()
-	commandBus, err := messaging.NewRabbitMqCommandBus(rabbitMqConn)
-	exitOnError(err)
-	queryBus := messaging.NewSynchronousQueryBus()
+	container := InitializeContainer()
+	defer container.MessageQueueConnection.Close()
+
+	runConsumers(container)
+
+	tempAppExecution(container)
+}
+
+func runConsumers(container Container) {
+	commandBus := container.CommandBus
+	queryBus := container.QueryBus
+	eventStore := container.EventStore
 
 	// command registry
 	commandBus.RegisterHandler(command.RegisterUser{}.CommandName(), command_handler.RegisterUserHandler{EventStore: eventStore})
 	commandBus.RegisterHandler(command.UpdateUserEmailAddress{}.CommandName(), command_handler.UpdateUserEmailAddressHandler{EventStore: eventStore})
 
-	go commandBus.StartConsuming()
-
 	// query registry
 	queryBus.RegisterHandler(query.GetUserById{}.QueryName(), query_handler.GetUserByIdHandler{EventStore: eventStore})
 
+	go commandBus.StartConsuming()
+}
+
+func tempAppExecution(container Container) {
 	time.Sleep(time.Second * 3)
 
 	userId := ulid.Make()
@@ -44,7 +48,7 @@ func main() {
 			LastName:     "Allen",
 			EmailAddress: "pascal@allen.com",
 		}
-		err = commandBus.Execute(registerUserCommand)
+		err := container.CommandBus.Execute(registerUserCommand)
 		exitOnError(err)
 
 		// simulate email address update
@@ -52,7 +56,7 @@ func main() {
 			Id:           userId,
 			EmailAddress: "thomas@allen.com",
 		}
-		err = commandBus.Execute(updateUserEmailCommand)
+		err = container.CommandBus.Execute(updateUserEmailCommand)
 		exitOnError(err)
 	}()
 
@@ -61,7 +65,7 @@ func main() {
 	go func() {
 		// simulate querying for user by ID
 		getUserByIdQuery := query.GetUserById{Id: userId}
-		u, err := queryBus.Fetch(getUserByIdQuery)
+		u, err := container.QueryBus.Fetch(getUserByIdQuery)
 		log.Printf("[[[ USER BUILT FROM EVENTS ]]]: %v\n", u)
 		exitOnError(err)
 	}()

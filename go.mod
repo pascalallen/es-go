@@ -4,6 +4,7 @@ go 1.22.1
 
 require (
 	github.com/EventStore/EventStore-Client-Go/v4 v4.1.0
+	github.com/google/wire v0.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/rabbitmq/amqp091-go v1.10.0
