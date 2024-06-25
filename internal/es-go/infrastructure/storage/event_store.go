@@ -25,7 +25,7 @@ type EventStoreDb struct {
 	client *esdb.Client
 }
 
-func NewEventStoreDb() (EventStore, error) {
+func NewEventStoreDb() EventStore {
 	connectionString := fmt.Sprintf(
 		"esdb://%s:%s?tls=false&keepAliveTimeout=10000&keepAliveInterval=10000",
 		os.Getenv("EVENTSTORE_HOST"),
@@ -34,15 +34,15 @@ func NewEventStoreDb() (EventStore, error) {
 
 	settings, err := esdb.ParseConnectionString(connectionString)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create configuration for event store: %s", err)
+		log.Fatalf("failed to create configuration for event store: %s\n", err)
 	}
 
 	client, err := esdb.NewClient(settings)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create client for event store: %s", err)
+		log.Fatalf("failed to create client for event store: %s\n", err)
 	}
 
-	return &EventStoreDb{client: client}, nil
+	return &EventStoreDb{client: client}
 }
 
 func (s *EventStoreDb) AppendToStream(streamId string, event Event) error {

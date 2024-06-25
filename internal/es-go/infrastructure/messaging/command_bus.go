@@ -31,7 +31,7 @@ type RabbitMqCommandBus struct {
 
 const queueName = "commands"
 
-func NewRabbitMqCommandBus(conn *amqp091.Connection) (CommandBus, error) {
+func NewRabbitMqCommandBus(conn *amqp091.Connection) CommandBus {
 	var ch *amqp091.Channel
 	var err error
 
@@ -46,7 +46,7 @@ func NewRabbitMqCommandBus(conn *amqp091.Connection) (CommandBus, error) {
 	}
 
 	if ch == nil {
-		return nil, fmt.Errorf("failed to open server channel for command queue after 5 attempts")
+		log.Fatalln("failed to open server channel for command queue after 5 attempts")
 	}
 
 	_, err = ch.QueueDeclare(
@@ -58,13 +58,13 @@ func NewRabbitMqCommandBus(conn *amqp091.Connection) (CommandBus, error) {
 		nil,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create or fetch queue: %s", err)
+		log.Fatalf("failed to create or fetch queue: %s\n", err)
 	}
 
 	return &RabbitMqCommandBus{
 		channel:  ch,
 		handlers: make(map[string]CommandHandler),
-	}, nil
+	}
 }
 
 func (bus *RabbitMqCommandBus) RegisterHandler(commandType string, handler CommandHandler) {
