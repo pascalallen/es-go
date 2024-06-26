@@ -15,9 +15,42 @@ func main() {
 	container := InitializeContainer()
 	defer container.MessageQueueConnection.Close()
 
+	createProjections(container)
+
 	runConsumers(container)
 
 	tempAppExecution(container)
+}
+
+func createProjections(container Container) {
+	eventStore := container.EventStore
+	name := "user-email-addresses"
+	script := `fromCategory('user')
+.when({
+    $init: function () {
+        return { email_addresses: {} };
+    },
+    UserRegistered: function (state, event) {
+        state.email_addresses[event.data.email_address] = event.data.id;
+    },
+    UserEmailAddressUpdated: function (state, event) {
+        // Find and remove the old email associated with the id
+        for (let emailAddress in state.email_addresses) {
+            if (state.email_addresses[emailAddress] === event.data.id) {
+                delete state.email_addresses[emailAddress];
+                break;
+            }
+        }
+        // Update to the new email
+        state.email_addresses[event.data.email_address] = event.data.id;
+    }
+})
+.outputState();`
+
+	err := eventStore.CreateProjection(name, script)
+	if err != nil {
+		exitOnError(err)
+	}
 }
 
 func runConsumers(container Container) {
