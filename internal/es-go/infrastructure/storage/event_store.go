@@ -10,19 +10,19 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
-
-type Event interface {
-	EventName() string
-}
 
 type EventStore interface {
 	AppendToStream(streamId string, event Event) error
 	ReadFromStream(streamId string) ([]Event, error)
+	CreateProjection(name string, script string) error
+	UnmarshalProjectionResult(name string, result interface{}) error
 }
 
 type EventStoreDb struct {
-	client *esdb.Client
+	client           *esdb.Client
+	projectionClient *esdb.ProjectionClient
 }
 
 func NewEventStoreDb() EventStore {
@@ -42,7 +42,15 @@ func NewEventStoreDb() EventStore {
 		log.Fatalf("failed to create client for event store: %s\n", err)
 	}
 
-	return &EventStoreDb{client: client}
+	projectionClient, err := esdb.NewProjectionClient(settings)
+	if err != nil {
+		log.Fatalf("failed to create projection client for event store: %s\n", err)
+	}
+
+	return &EventStoreDb{
+		client:           client,
+		projectionClient: projectionClient,
+	}
 }
 
 func (s *EventStoreDb) AppendToStream(streamId string, event Event) error {
@@ -150,4 +158,39 @@ func (s *EventStoreDb) ReadFromStream(streamId string) ([]Event, error) {
 	}
 
 	return events, nil
+}
+
+func (s *EventStoreDb) CreateProjection(name string, script string) error {
+	opts := esdb.CreateProjectionOptions{}
+
+	err := s.projectionClient.Create(context.Background(), name, script, opts)
+	if err, ok := esdb.FromError(err); !ok {
+		if err.IsErrorCode(esdb.ErrorCodeUnknown) && strings.Contains(err.Err().Error(), "Conflict") {
+			log.Printf("projection %s already exists", name)
+		} else {
+			return fmt.Errorf("failed to create projection: %s", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *EventStoreDb) UnmarshalProjectionResult(name string, result interface{}) error {
+	opts := esdb.GetResultProjectionOptions{}
+
+	value, err := s.projectionClient.GetResult(context.Background(), name, opts)
+	if err != nil {
+		return fmt.Errorf("failed to get projection result: %s", err)
+	}
+
+	jsonContent, err := value.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("failed to marshal projection result: %s", err)
+	}
+
+	if err = json.Unmarshal(jsonContent, result); err != nil {
+		return fmt.Errorf("failed to unmarshal projection result: %s", err)
+	}
+
+	return nil
 }
