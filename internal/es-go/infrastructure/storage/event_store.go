@@ -16,7 +16,7 @@ import (
 type EventStore interface {
 	AppendToStream(streamId string, event Event) error
 	ReadFromStream(streamId string) ([]Event, error)
-	CreateProjection(name string, script string) error
+	RegisterProjection(projection Projection) error
 	UnmarshalProjectionResult(name string, result interface{}) error
 }
 
@@ -160,13 +160,13 @@ func (s *EventStoreDb) ReadFromStream(streamId string) ([]Event, error) {
 	return events, nil
 }
 
-func (s *EventStoreDb) CreateProjection(name string, script string) error {
+func (s *EventStoreDb) RegisterProjection(projection Projection) error {
 	opts := esdb.CreateProjectionOptions{}
 
-	err := s.projectionClient.Create(context.Background(), name, script, opts)
+	err := s.projectionClient.Create(context.Background(), projection.Name(), projection.Script(), opts)
 	if err, ok := esdb.FromError(err); !ok {
 		if err.IsErrorCode(esdb.ErrorCodeUnknown) && strings.Contains(err.Err().Error(), "Conflict") {
-			log.Printf("projection %s already exists", name)
+			log.Printf("projection %s already exists", projection)
 		} else {
 			return fmt.Errorf("failed to create projection: %s", err)
 		}

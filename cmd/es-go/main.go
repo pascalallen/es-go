@@ -5,6 +5,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/pascalallen/es-go/internal/es-go/application/command"
 	"github.com/pascalallen/es-go/internal/es-go/application/command_handler"
+	"github.com/pascalallen/es-go/internal/es-go/application/projection"
 	"github.com/pascalallen/es-go/internal/es-go/application/query"
 	"github.com/pascalallen/es-go/internal/es-go/application/query_handler"
 	"log"
@@ -15,39 +16,18 @@ func main() {
 	container := InitializeContainer()
 	defer container.MessageQueueConnection.Close()
 
-	createProjections(container)
+	setupProjections(container)
 
 	runConsumers(container)
 
 	tempAppExecution(container)
 }
 
-func createProjections(container Container) {
+func setupProjections(container Container) {
 	eventStore := container.EventStore
-	name := "user-email-addresses"
-	script := `fromCategory('user')
-.when({
-    $init: function () {
-        return { email_addresses: {} };
-    },
-    UserRegistered: function (state, event) {
-        state.email_addresses[event.data.email_address] = event.data.id;
-    },
-    UserEmailAddressUpdated: function (state, event) {
-        // Find and remove the old email associated with the id
-        for (let emailAddress in state.email_addresses) {
-            if (state.email_addresses[emailAddress] === event.data.id) {
-                delete state.email_addresses[emailAddress];
-                break;
-            }
-        }
-        // Update to the new email
-        state.email_addresses[event.data.email_address] = event.data.id;
-    }
-})
-.outputState();`
 
-	err := eventStore.CreateProjection(name, script)
+	// projection registry
+	err := eventStore.RegisterProjection(projection.UserEmailAddresses{})
 	if err != nil {
 		exitOnError(err)
 	}
