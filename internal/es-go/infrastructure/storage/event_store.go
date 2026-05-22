@@ -14,8 +14,8 @@ import (
 )
 
 type EventStore interface {
-	AppendToStream(streamId string, event Event) error
-	ReadFromStream(streamId string) ([]Event, error)
+	AppendToStream(streamId string, evt Event) error
+	ReadFromStream(streamId string) ([]event.Event, error)
 	RegisterProjection(projection Projection) error
 	UnmarshalProjectionResult(name string, result interface{}) error
 }
@@ -53,7 +53,7 @@ func NewEventStoreDb() EventStore {
 	}
 }
 
-func (s *EventStoreDb) AppendToStream(streamId string, event Event) error {
+func (s *EventStoreDb) AppendToStream(streamId string, evt Event) error {
 	ropts := esdb.ReadStreamOptions{
 		Direction: esdb.Backwards,
 		From:      esdb.End{},
@@ -75,7 +75,7 @@ func (s *EventStoreDb) AppendToStream(streamId string, event Event) error {
 		}
 	}
 
-	data, err := json.Marshal(event)
+	data, err := json.Marshal(evt)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event for stream: %s", err)
 	}
@@ -88,7 +88,7 @@ func (s *EventStoreDb) AppendToStream(streamId string, event Event) error {
 	}
 	eventData := esdb.EventData{
 		ContentType: esdb.ContentTypeJson,
-		EventType:   event.EventName(),
+		EventType:   evt.EventName(),
 		Data:        data,
 	}
 
@@ -100,8 +100,8 @@ func (s *EventStoreDb) AppendToStream(streamId string, event Event) error {
 	return nil
 }
 
-func (s *EventStoreDb) ReadFromStream(streamId string) ([]Event, error) {
-	var events []Event
+func (s *EventStoreDb) ReadFromStream(streamId string) ([]event.Event, error) {
+	var events []event.Event
 	position := esdb.Revision(0)
 
 	for {
@@ -119,33 +119,37 @@ func (s *EventStoreDb) ReadFromStream(streamId string) ([]Event, error) {
 
 		for {
 			evt, err := stream.Recv()
-			if err, ok := esdb.FromError(err); !ok {
+			if err != nil {
 				if errors.Is(err, io.EOF) {
 					break
 				}
-
-				if err, ok := esdb.FromError(err); !ok {
-					return events, fmt.Errorf("error attempting to stream incoming event: %s", err)
-				}
+				stream.Close()
+				return events, fmt.Errorf("error attempting to stream incoming event: %s", err)
 			}
 
-			var e Event
+			var e event.Event
 			switch evt.OriginalEvent().EventType {
 			case event.UserRegistered{}.EventName():
 				e = &event.UserRegistered{}
 			case event.UserEmailAddressUpdated{}.EventName():
 				e = &event.UserEmailAddressUpdated{}
+			case event.UserPasswordSet{}.EventName():
+				e = &event.UserPasswordSet{}
+			case event.UserRoleAssigned{}.EventName():
+				e = &event.UserRoleAssigned{}
+			case event.UserDeleted{}.EventName():
+				e = &event.UserDeleted{}
 			default:
+				stream.Close()
 				return events, fmt.Errorf("unknown event retrieved: %s", evt.OriginalEvent().EventType)
 			}
 
-			err = json.Unmarshal(evt.OriginalEvent().Data, &e)
-			if err != nil {
+			if err = json.Unmarshal(evt.OriginalEvent().Data, e); err != nil {
+				stream.Close()
 				return events, fmt.Errorf("failed to unmarshal event: %s", err)
 			}
 
 			events = append(events, e)
-
 			position = esdb.Revision(evt.OriginalEvent().EventNumber + 1)
 			hasMoreEvents = true
 		}
