@@ -143,6 +143,10 @@ func (bus *RabbitMqCommandBus) messages() (<-chan amqp091.Delivery, error) {
 	return d, nil
 }
 
+// processCommand deserializes an incoming message and dispatches it to the registered handler.
+// Note: this switch couples the infrastructure layer to application-layer command types.
+// A larger system would inject a map[string]func() Command registry at startup to invert
+// this dependency — keeping the bus generic and moving command knowledge to the composition root.
 func (bus *RabbitMqCommandBus) processCommand(msg amqp091.Delivery) error {
 	var cmd Command
 
@@ -151,6 +155,10 @@ func (bus *RabbitMqCommandBus) processCommand(msg amqp091.Delivery) error {
 		cmd = &command.RegisterUser{}
 	case command.UpdateUserEmailAddress{}.CommandName():
 		cmd = &command.UpdateUserEmailAddress{}
+	case command.AssignRoleToUser{}.CommandName():
+		cmd = &command.AssignRoleToUser{}
+	case command.DeleteUser{}.CommandName():
+		cmd = &command.DeleteUser{}
 	default:
 		return fmt.Errorf("unknown command received: %s", msg.Type)
 	}
