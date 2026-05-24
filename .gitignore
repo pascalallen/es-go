@@ -1,6 +1,15 @@
+# Claude Code
+.claude/settings.local.json
+
 # misc
 .idea
 .env
 .DS_Store
 coverage.out
 coverage.html
+
+# compiled binary
+cmd/es-go/es-go
+
+# Claude-generated working artifacts
+docs/superpowers/
