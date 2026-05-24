@@ -14,7 +14,7 @@ import (
 )
 
 type EventStore interface {
-	AppendToStream(streamId string, evt Event) error
+	AppendToStream(streamId string, expectedVersion int, events []event.Event) error
 	ReadFromStream(streamId string) ([]event.Event, error)
 	RegisterProjection(projection Projection) error
 	UnmarshalProjectionResult(name string, result interface{}) error
@@ -53,48 +53,33 @@ func NewEventStoreDb() EventStore {
 	}
 }
 
-func (s *EventStoreDb) AppendToStream(streamId string, evt Event) error {
-	ropts := esdb.ReadStreamOptions{
-		Direction: esdb.Backwards,
-		From:      esdb.End{},
+// AppendToStream persists events to a stream with optimistic concurrency.
+// expectedVersion == -1 asserts the stream does not yet exist (esdb.NoStream).
+// expectedVersion >= 0 asserts that the last persisted event has that stream revision.
+func (s *EventStoreDb) AppendToStream(streamId string, expectedVersion int, events []event.Event) error {
+	var opts esdb.AppendToStreamOptions
+	if expectedVersion == -1 {
+		opts = esdb.AppendToStreamOptions{ExpectedRevision: esdb.NoStream{}}
+	} else {
+		opts = esdb.AppendToStreamOptions{ExpectedRevision: esdb.Revision(uint64(expectedVersion))}
 	}
 
-	stream, err := s.client.ReadStream(context.Background(), streamId, ropts, 1)
-	if err != nil {
-		return fmt.Errorf("failed to read from stream for last event: %s", err)
-	}
-
-	defer stream.Close()
-
-	lastEvent, err := stream.Recv()
-	if err, ok := esdb.FromError(err); !ok {
-		if err.Code() == esdb.ErrorCodeResourceNotFound {
-			log.Printf("last event stream not found when attempting to append with stream ID: %s", streamId)
-		} else {
-			return fmt.Errorf("failed to get last event from stream: %s", err)
+	var eventDataSlice []esdb.EventData
+	for _, e := range events {
+		data, err := json.Marshal(e)
+		if err != nil {
+			return fmt.Errorf("failed to marshal event %s: %s", e.EventName(), err)
 		}
+		eventDataSlice = append(eventDataSlice, esdb.EventData{
+			ContentType: esdb.ContentTypeJson,
+			EventType:   e.EventName(),
+			Data:        data,
+		})
 	}
 
-	data, err := json.Marshal(evt)
+	_, err := s.client.AppendToStream(context.Background(), streamId, opts, eventDataSlice...)
 	if err != nil {
-		return fmt.Errorf("failed to marshal event for stream: %s", err)
-	}
-
-	opts := esdb.AppendToStreamOptions{}
-	if lastEvent != nil {
-		opts = esdb.AppendToStreamOptions{
-			ExpectedRevision: lastEvent.OriginalStreamRevision(),
-		}
-	}
-	eventData := esdb.EventData{
-		ContentType: esdb.ContentTypeJson,
-		EventType:   evt.EventName(),
-		Data:        data,
-	}
-
-	_, err = s.client.AppendToStream(context.Background(), streamId, opts, eventData)
-	if err != nil {
-		return fmt.Errorf("failed to append event to stream: %s", err)
+		return fmt.Errorf("failed to append events to stream: %s", err)
 	}
 
 	return nil
