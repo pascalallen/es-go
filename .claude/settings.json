@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go test *)",
+      "Bash(go build *)",
+      "Bash(go vet *)",
+      "Bash(go version)",
+      "Bash(go mod download)",
+      "Bash(go mod verify)",
+      "Bash(bin/exec go test *)",
+      "Bash(bin/exec go build *)",
+      "Bash(bin/exec go vet *)",
+      "mcp__plugin_github_github__get_file_contents"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | python3 -c \"import json,sys; print(json.load(sys.stdin).get('command',''))\" 2>/dev/null); if echo \"$CMD\" | grep -q '^git commit'; then echo 'Running tests before commit...' && bin/exec go test ./...; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); FILE=$(echo \"$INPUT\" | python3 -c \"import json,sys; print(json.load(sys.stdin).get('file_path',''))\" 2>/dev/null); if [[ \"$FILE\" == *.go ]]; then bin/exec go vet ./... 2>&1 | tail -30; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
