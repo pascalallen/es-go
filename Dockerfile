@@ -1,4 +1,4 @@
-FROM --platform=linux/arm64 golang:1.22
+FROM --platform=linux/arm64 golang:1.26
 
 LABEL org.opencontainers.image.source=https://github.com/pascalallen/es-go
 LABEL org.opencontainers.image.description="Container image for es-go"

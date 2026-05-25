@@ -1,6 +1,6 @@
 module github.com/pascalallen/es-go
 
-go 1.22.1
+go 1.26.3
 
 require (
 	github.com/EventStore/EventStore-Client-Go/v4 v4.1.0
